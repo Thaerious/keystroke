@@ -1,5 +1,6 @@
-package com.mycompany.keystroke;
+package ca.frar.keystroke;
 
+import java.awt.AWTException;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -9,6 +10,8 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import org.jnativehook.NativeHookException;
+import org.xml.sax.SAXException;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -48,6 +51,7 @@ public class MainFrame extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         jTextArea1.setColumns(20);
+        jTextArea1.setFont(new java.awt.Font("Consolas", 0, 18)); // NOI18N
         jTextArea1.setRows(5);
         jScrollPane1.setViewportView(jTextArea1);
 
@@ -104,8 +108,8 @@ public class MainFrame extends javax.swing.JFrame {
     private void menuItemLoadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemLoadActionPerformed
         final JFileChooser fc = new JFileChooser();
         fc.setCurrentDirectory(new File("D:\\scratch"));
-        int returnVal = fc.showOpenDialog(this);        
-        
+        int returnVal = fc.showOpenDialog(this);
+
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             File file = fc.getSelectedFile();
             readFile(file);
@@ -118,7 +122,7 @@ public class MainFrame extends javax.swing.JFrame {
         final JFileChooser fc = new JFileChooser();
         fc.setCurrentDirectory(new File("D:\\scratch"));
         int returnVal = fc.showSaveDialog(this);
-        
+
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             File file = fc.getSelectedFile();
             saveFile(file);
@@ -128,7 +132,12 @@ public class MainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_menuItemSaveActionPerformed
 
     private void menuItemRunActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemRunActionPerformed
-        KeyStrokeGenerator keyStrokeGenerator = new KeyStrokeGenerator(this.jTextArea1.getText());
+        try {
+            KeyStrokeGenerator keyStrokeGenerator = new KeyStrokeGenerator(this.jTextArea1.getText());
+            keyStrokeGenerator.start();
+        } catch (InterruptedException | AWTException | SAXException | NativeHookException ex) {
+            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }//GEN-LAST:event_menuItemRunActionPerformed
 
     private void saveFile(File file) {
@@ -138,18 +147,18 @@ public class MainFrame extends javax.swing.JFrame {
             fWriter.close();
         } catch (IOException ex) {
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
-        }        
+        }
     }
-    
+
     private void readFile(File file) {
         try {
-            this.jTextArea1.setText("text");
+            this.jTextArea1.setText("");
             FileReader fReader = new FileReader(file);
             BufferedReader bfReader = new BufferedReader(fReader);
             String line = bfReader.readLine();
 
             while (line != null) {
-                System.out.println(line);                
+                System.out.println(line);
                 this.jTextArea1.append(line + "\n");
                 line = bfReader.readLine();
             }
