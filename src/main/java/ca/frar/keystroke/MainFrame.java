@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
@@ -23,6 +24,9 @@ import org.xml.sax.SAXException;
  * @author ed
  */
 public class MainFrame extends javax.swing.JFrame {
+
+    private String filename;
+    private KeyStrokeGenerator keyStrokeGenerator;
 
     /**
      * Creates new form MainFrame
@@ -42,11 +46,14 @@ public class MainFrame extends javax.swing.JFrame {
 
         jScrollPane1 = new javax.swing.JScrollPane();
         jTextArea1 = new javax.swing.JTextArea();
+        labelCommand = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         menuItemLoad = new javax.swing.JMenuItem();
+        menuItemSaveAs = new javax.swing.JMenuItem();
         menuItemSave = new javax.swing.JMenuItem();
         menuItemRun = new javax.swing.JMenuItem();
+        menuItemStop = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -55,8 +62,13 @@ public class MainFrame extends javax.swing.JFrame {
         jTextArea1.setRows(5);
         jScrollPane1.setViewportView(jTextArea1);
 
+        labelCommand.setFont(new java.awt.Font("Consolas", 0, 36)); // NOI18N
+        labelCommand.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        labelCommand.setText("---");
+
         jMenu1.setText("File");
 
+        menuItemLoad.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, java.awt.event.InputEvent.CTRL_MASK));
         menuItemLoad.setText("Load Script");
         menuItemLoad.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -65,7 +77,17 @@ public class MainFrame extends javax.swing.JFrame {
         });
         jMenu1.add(menuItemLoad);
 
+        menuItemSaveAs.setText("Save Script As");
+        menuItemSaveAs.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                menuItemSaveAsActionPerformed(evt);
+            }
+        });
+        jMenu1.add(menuItemSaveAs);
+
+        menuItemSave.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.CTRL_MASK));
         menuItemSave.setText("Save Script");
+        menuItemSave.setEnabled(false);
         menuItemSave.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 menuItemSaveActionPerformed(evt);
@@ -73,6 +95,7 @@ public class MainFrame extends javax.swing.JFrame {
         });
         jMenu1.add(menuItemSave);
 
+        menuItemRun.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, java.awt.event.InputEvent.CTRL_MASK));
         menuItemRun.setText("Run");
         menuItemRun.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -80,6 +103,14 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
         jMenu1.add(menuItemRun);
+
+        menuItemStop.setText("Stop");
+        menuItemStop.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                menuItemStopActionPerformed(evt);
+            }
+        });
+        jMenu1.add(menuItemStop);
 
         jMenuBar1.add(jMenu1);
 
@@ -91,14 +122,18 @@ public class MainFrame extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 816, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 816, Short.MAX_VALUE)
+                    .addComponent(labelCommand, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 623, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 574, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(labelCommand)
                 .addContainerGap())
         );
 
@@ -113,12 +148,14 @@ public class MainFrame extends javax.swing.JFrame {
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             File file = fc.getSelectedFile();
             readFile(file);
+            this.filename = file.getAbsolutePath();
+            this.menuItemSave.setEnabled(true);
         } else {
 
         }
     }//GEN-LAST:event_menuItemLoadActionPerformed
 
-    private void menuItemSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemSaveActionPerformed
+    private void menuItemSaveAsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemSaveAsActionPerformed
         final JFileChooser fc = new JFileChooser();
         fc.setCurrentDirectory(new File("D:\\scratch"));
         int returnVal = fc.showSaveDialog(this);
@@ -126,19 +163,38 @@ public class MainFrame extends javax.swing.JFrame {
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             File file = fc.getSelectedFile();
             saveFile(file);
+            this.filename = file.getAbsolutePath();
+            this.menuItemSave.setEnabled(true);
         } else {
 
         }
-    }//GEN-LAST:event_menuItemSaveActionPerformed
+    }//GEN-LAST:event_menuItemSaveAsActionPerformed
 
     private void menuItemRunActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemRunActionPerformed
         try {
-            KeyStrokeGenerator keyStrokeGenerator = new KeyStrokeGenerator(this.jTextArea1.getText());
-            keyStrokeGenerator.start();
+            this.keyStrokeGenerator = new KeyStrokeGenerator(this.jTextArea1.getText());
+            
+            keyStrokeGenerator.nextCommand = new Consumer<String>(){
+                @Override
+                public void accept(String t) {
+                    MainFrame.this.labelCommand.setText(t);
+                }
+            
+            };
+            
+            new Thread(keyStrokeGenerator).start();
         } catch (InterruptedException | AWTException | SAXException | NativeHookException ex) {
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_menuItemRunActionPerformed
+
+    private void menuItemSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemSaveActionPerformed
+        this.saveFile(new File(this.filename));
+    }//GEN-LAST:event_menuItemSaveActionPerformed
+
+    private void menuItemStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemStopActionPerformed
+        keyStrokeGenerator.stop();
+    }//GEN-LAST:event_menuItemStopActionPerformed
 
     private void saveFile(File file) {
         try {
@@ -212,8 +268,11 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextArea jTextArea1;
+    private javax.swing.JLabel labelCommand;
     private javax.swing.JMenuItem menuItemLoad;
     private javax.swing.JMenuItem menuItemRun;
     private javax.swing.JMenuItem menuItemSave;
+    private javax.swing.JMenuItem menuItemSaveAs;
+    private javax.swing.JMenuItem menuItemStop;
     // End of variables declaration//GEN-END:variables
 }

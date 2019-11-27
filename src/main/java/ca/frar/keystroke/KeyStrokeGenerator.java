@@ -10,6 +10,7 @@ import java.awt.AWTException;
 import java.awt.Robot;
 import java.awt.event.KeyEvent;
 import java.util.List;
+import java.util.function.Consumer;
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
 import org.xml.sax.SAXException;
@@ -18,33 +19,41 @@ import org.xml.sax.SAXException;
  *
  * @author ed
  */
-public class KeyStrokeGenerator {
-
-    private int defaultDelay = 150;
+public class KeyStrokeGenerator implements Runnable {
+    private int defaultDelay = 100;
+    private int crlfDelay = 500;
 
     private final Robot robot;
     private final Query script;
     private final KeyMap keyMap = new KeyMap();
     private String awaiting = "";
-    GlobalKeyListener keyListener;
+    GlobalKeyListener globalKeyListener;
 
     List<Query> currentChildren = null;
     int currentIndex = 0;
+    boolean running = false;
 
+    Consumer<String> nextCommand = null;
+    private final Consumer<String> onKey;
+    
     KeyStrokeGenerator(String script) throws InterruptedException, AWTException, SAXException, NativeHookException {
         this.robot = new Robot();
         this.script = new Query(script);
 
-        keyListener = new GlobalKeyListener() {
+        robot.setAutoWaitForIdle(false);
+
+        onKey = new Consumer<>() {
             @Override
-            public void onKey(String keyText) {
-                System.out.println(keyText);
+            public void accept(String keyText) {
+                System.out.println(keyText + ", " + awaiting);
                 if (keyText.equals(awaiting) || awaiting.equals("any")) {
                     awaiting = "";
                     continueProcess();
                 }
             }
         };
+
+        globalKeyListener = new GlobalKeyListener(onKey);
 
         // Get the logger for "org.jnativehook" and set the level to warning.
         java.util.logging.Logger log = java.util.logging.Logger.getLogger(GlobalScreen.class.getPackage().getName());
@@ -54,25 +63,31 @@ public class KeyStrokeGenerator {
         log.setUseParentHandlers(false);
     }
 
-    public void start() throws InterruptedException, NativeHookException {
-        this.keyListener.start();
+    @Override
+    public void run() {
+        if (nextCommand != null) nextCommand.accept("");
+        globalKeyListener.run();
+        this.running = true;
         currentChildren = this.script.children().split();
-        currentIndex = 0;
+        currentIndex = 0;        
         this.continueProcess();
     }
 
+    public void stop() {
+        this.running = false;
+        if (!awaiting.isEmpty()) this.onKey.accept(awaiting);
+    }
+
     private void continueProcess() {
-        while (awaiting.isEmpty() && currentIndex < currentChildren.size()) {
+        while (running && awaiting.isEmpty() && currentIndex < currentChildren.size()) {            
             this.process(currentChildren.get(currentIndex));
             currentIndex++;
         }
 
-        if (currentIndex >= currentChildren.size()) {
-            try {
-                this.keyListener.stop();
-            } catch (NativeHookException ex) {
-//                log.getLogger(KeyStrokeGenerator.class.getName()).log(Level.SEVERE, null, ex);
-            }
+        if (running == false || currentIndex >= currentChildren.size()) {
+            System.out.println("stopping");
+            this.globalKeyListener.stop();
+            if (nextCommand != null) nextCommand.accept("");
         }
     }
 
@@ -95,6 +110,9 @@ public class KeyStrokeGenerator {
             case "set":
                 processSet(child);
                 break;
+            case "crlf":
+                processCRLF(child);
+                break;                
         }
     }
 
@@ -109,25 +127,32 @@ public class KeyStrokeGenerator {
         }
     }
 
+    private void processCRLF(Query child) {
+        robot.keyPress(KeyEvent.VK_ENTER);
+    }
+    
     private void processType(Query child) {
+        if (nextCommand != null) nextCommand.accept("");
         int delay = this.defaultDelay;
         if (child.hasAttribute("delay")) {
             delay = Integer.parseInt(child.attribute("delay"));
         }
 
         String[] split = child.text().split("\n");
-        for (String string : split) {
-            String value = string.trim();
+        for (String value : split) {
             for (char c : value.toCharArray()) {
                 KeyStroke keyStroke = keyMap.get(c);
                 keyStroke.stroke(robot);
                 robot.delay(delay);
             }
         }
-        
-        System.out.println(child.attribute("crlf"));
-        
-        if (!child.attribute("crlf").equals("false")) {
+
+        String crlf = child.attribute("crlf");
+
+        if (crlf.equals("await")) {
+            if (nextCommand != null) nextCommand.accept("awaiting <Enter>");
+            this.awaiting = "Enter";
+        } else if (!child.attribute("crlf").equals("false")) {
             robot.keyPress(KeyEvent.VK_ENTER);
         }
     }
@@ -140,6 +165,7 @@ public class KeyStrokeGenerator {
     private void processAwait(Query child) {
         String key = child.attribute("key");
         this.awaiting = key;
+        if (nextCommand != null) nextCommand.accept("awaiting <" + key + ">");
     }
 
     private void processStroke(Query child) {
