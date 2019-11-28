@@ -45,7 +45,7 @@ public class KeyStrokeGenerator implements Runnable {
         onKey = new Consumer<>() {
             @Override
             public void accept(String keyText) {
-                System.out.println(keyText + ", " + awaiting);
+                System.out.println(Thread.currentThread().hashCode() + " " + keyText + ", " + awaiting);
                 if (keyText.equals(awaiting) || awaiting.equals("any")) {
                     awaiting = "";
                     continueProcess();
@@ -54,7 +54,11 @@ public class KeyStrokeGenerator implements Runnable {
         };
 
         globalKeyListener = new GlobalKeyListener(onKey);
-
+        Thread t = new Thread(globalKeyListener);
+        System.out.println("globalKeyListener thread = " + t.hashCode());
+        System.out.println("this thread = " + Thread.currentThread().hashCode());
+        t.start();
+        
         // Get the logger for "org.jnativehook" and set the level to warning.
         java.util.logging.Logger log = java.util.logging.Logger.getLogger(GlobalScreen.class.getPackage().getName());
         log.setLevel(java.util.logging.Level.OFF);
@@ -66,7 +70,7 @@ public class KeyStrokeGenerator implements Runnable {
     @Override
     public void run() {
         if (nextCommand != null) nextCommand.accept("");
-        globalKeyListener.run();
+//        globalKeyListener.run();
         this.running = true;
         currentChildren = this.script.children().split();
         currentIndex = 0;        
@@ -85,14 +89,13 @@ public class KeyStrokeGenerator implements Runnable {
         }
 
         if (running == false || currentIndex >= currentChildren.size()) {
-            System.out.println("stopping");
-            this.globalKeyListener.stop();
+//            this.globalKeyListener.stop();
             if (nextCommand != null) nextCommand.accept("");
         }
     }
 
     private void process(Query child) {
-        System.out.println(child);
+        System.out.println(Thread.currentThread().hashCode() + " " + child);
 
         switch (child.tagName()) {
             case "pause":

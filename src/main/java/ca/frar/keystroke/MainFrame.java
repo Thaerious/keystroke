@@ -178,11 +178,12 @@ public class MainFrame extends javax.swing.JFrame {
                 @Override
                 public void accept(String t) {
                     MainFrame.this.labelCommand.setText(t);
-                }
-            
+                }            
             };
             
-            new Thread(keyStrokeGenerator).start();
+            Thread t = new Thread(keyStrokeGenerator);
+            System.out.println("keyStrokeGenerateor thread = " + t.hashCode());
+            t.start();
         } catch (InterruptedException | AWTException | SAXException | NativeHookException ex) {
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -258,6 +259,7 @@ public class MainFrame extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
+                System.out.println(Thread.currentThread().hashCode());
                 new MainFrame().setVisible(true);
             }
         });

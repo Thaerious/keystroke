@@ -7,8 +7,7 @@ import org.jnativehook.NativeHookException;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
 
-public class GlobalKeyListener implements NativeKeyListener, Runnable {
-    
+public class GlobalKeyListener implements NativeKeyListener, Runnable{    
     private Consumer<String> onKey;
     
     public GlobalKeyListener(Consumer<String> onKey){
@@ -19,7 +18,6 @@ public class GlobalKeyListener implements NativeKeyListener, Runnable {
     public void nativeKeyTyped(NativeKeyEvent e) {
     }
 
-    @Override
     public void run() {
         try {
             GlobalScreen.registerNativeHook();
